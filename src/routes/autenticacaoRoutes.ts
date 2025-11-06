@@ -44,7 +44,6 @@ autenticacaoRoutes.post("/login", async (req: Request, resp: Response) => {
     if (usuario) {
       console.log("hell")
       if (!existsUser?.token) {
-        console.log("Entrouuu")
         const token = await JwtCreate(String(usuario?.id))
         console.log("TOKENNNN", token)
         console.log("TEste")

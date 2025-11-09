@@ -44,28 +44,33 @@ usuarioRoutes.post("/",
 
 usuarioRoutes.post("/verify-data",
     async (req: Request, resp: Response) => {
-        console.log("Chegou aqui")
         const userData = req.body
+        let itemsFound: string[] = [];
     
-        const existingUserCPF = await usuarioRepo.findOne({ where: { cpfcnpj: userData.cpfcnpj } });
+        const existingUserCPF = await usuarioRepo.findOne({ where: { cpfcnpj: userData.cpfcnpj } }).then((user) => {
+             user?.id !== undefined ? itemsFound.push('CPF') : null;
+        })
 
-        const existingUserEmail = await usuarioRepo.findOne({ where: { email: userData.email } });
+        const existingUserEmail = await usuarioRepo.findOne({ where: { email: userData.email } }).then((user) => {
+             user?.id !== undefined ? itemsFound.push('e-mail') : null;
+        })
 
-        const existingPhone = await usuarioRepo.findOne({ where: { telefone: userData.telefone } });
-        const existingUserConta = await usuarioRepo.findOne({ where: { conta: { nroConta: userData.conta.nroConta } } });
-        if (existingUserCPF) {
-            return resp.status(400).json({ exists: true, message: `CPF` });
+        const existingPhone = await usuarioRepo.findOne({ where: { telefone: userData.telefone } }).then((user) => {
+             user?.id !== undefined ? itemsFound.push('telefone') : null;
+        })
+        const existingUserConta = await usuarioRepo.findOne({ where: { conta: { nroConta: userData.conta.nroConta } } }).then((user) => {
+             user?.id !== undefined ? itemsFound.push('número de conta') : null;
+        })
+
+
+
+        if (existingUserCPF === null || existingUserEmail === null || existingUserConta === null || existingPhone === null) {
+            resp.status(200).json({ exists: false, message: `Dados disponíveis para cadastro.` });
+       
         } 
-        if (existingUserEmail) {
-            return resp.status(400).json({ exists: true, message: `E-mail` });
-        } 
-        if (existingUserConta) {
-            return resp.status(400).json({ exists: true, message: `Número de conta` });
-        } 
-        if (existingPhone) {
-            return resp.status(400).json({ exists: true, message: `Telefone` });
-        }
-        resp.status(200).json({ exists: false, message: `Dados disponíveis para cadastro.` });
+ 
+            return resp.status(200).json({ exists: true, message: itemsFound });
+
     }
 )
 

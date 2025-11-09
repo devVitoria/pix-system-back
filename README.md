@@ -49,7 +49,7 @@ yarn test
 
 ## Endpoints
 
-# Authentication 
+### Authentication 
 
 | Method | Route                              | Description  |
 |--------|-------------------------------------|--------------|
@@ -72,7 +72,7 @@ Request Body:
 
 ---
 
-# User
+### User
 
 | Method | Route                              | Description  |
 |--------|-------------------------------------|--------------|
@@ -123,7 +123,7 @@ Request Body:
 
 ---
 
-# Keys
+### Keys
 
 | Method | Route                              | Description  |
 |--------|-------------------------------------|--------------|
@@ -145,7 +145,7 @@ Request Body:
 
 ---
 
-# Account
+### Account
 
 | Method | Route                              | Description  |
 |--------|-------------------------------------|--------------|
@@ -163,7 +163,7 @@ Request Body:
 
 ---
 
-# Transactions
+### Transactions
 
 
 | Method | Route                              | Description  |

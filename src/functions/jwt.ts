@@ -6,17 +6,14 @@ export const secret = new TextEncoder().encode(process.env.JWT_SECRET)
 
 export async function JwtCreate(id: string) {
     const { SignJWT } = await import("jose");
-    console.log("entrouuu")
     try {
     const a = await new SignJWT({ id }).setProtectedHeader({ alg: "HS256" })
         .setIssuedAt()
         .setExpirationTime("20m")
         .sign(secret);
 
-    console.log("AAAA", a)
     return a
 } catch (e) {
-console.log("DEUUU ERRO NESSE CARAIII", e)
 }
 }
 

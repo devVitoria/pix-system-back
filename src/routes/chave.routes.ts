@@ -48,13 +48,14 @@ chavesRoutes.post("/",
             resp.statusMessage = "Chave Criada"
             resp.send(chave)
         } catch (e: any) {
-            console.log(e)
             resp.status(404).send(e.message ?? "Erro ao criar chave     ")
         }
 
 
     }
 )
+
+
 chavesRoutes.delete("/:chave",
     async (req: Request, resp: Response) => {
         const authHeader = req.headers.authorization
@@ -104,6 +105,49 @@ chavesRoutes.get("/:chave",
         resp.statusMessage = "Requisição recebida"
         resp.json(
             chave
+        )
+    }
+)
+
+chavesRoutes.get("/getter/:chaveDestino/:requestUser",
+    async (req: Request, resp: Response) => {
+
+        const authHeader = req.headers.authorization
+        const teste = JwtVerifyAuth(authHeader || "")
+        if (!teste || authHeader === undefined) {
+            resp.statusCode = 404;
+            resp.statusMessage = "Acesso não permitido. Token inválido."
+            resp.send()
+        }
+
+        const requestUser = await usuarioRepo.findOneBy({ id: parseInt(req.params.requestUser) })
+
+        const chave = await chavesRepo.findOne({
+            where: {
+                chave: req.params.chaveDestino
+            },
+            relations: { usuario: true }
+        })
+
+        
+
+        if (!chave?.usuario) {
+            resp.statusCode = 404;
+            resp.statusMessage = "Chave destino não encontrada"
+            resp.send()
+            return
+        }
+        
+        if (chave.usuario.id === requestUser?.id) {
+            resp.statusCode = 400;
+            resp.statusMessage = "Chave destino pertence ao usuário remetente"
+            resp.send()
+            return
+        }
+        resp.statusCode = 200;
+        resp.statusMessage = "Chave destino encontrada"
+        resp.json(
+            chave?.usuario
         )
     }
 )

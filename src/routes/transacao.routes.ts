@@ -14,7 +14,6 @@ transaRoutes.post("/",
     async (req: Request, resp: Response) => {
         const { chave_origem, chave_destino, valor, mensagem } = req.body
         const valor_num = parseFloat(valor);
-
         const authHeader = req.headers.authorization
         const teste = JwtVerifyAuth(authHeader || "")
         if (!teste || authHeader === undefined) {
@@ -40,6 +39,7 @@ transaRoutes.post("/",
             const contaOrigem = await query.manager.getRepository(Chave).query('select conta.id as id, conta.saldo as saldo from chaves inner join usuario on chaves."usuarioId" = usuario.id inner join conta on usuario."contaId" = conta.id where chaves.chave = $1', [chave_origem])
 
             const contaDestino = await query.manager.getRepository(Chave).query('select conta.id as id, conta.saldo as saldo from chaves inner join usuario on chaves."usuarioId" = usuario.id inner join conta on usuario."contaId" = conta.id where chaves.chave = $1', [chave_destino])
+
 
             if (!contaOrigem || !contaDestino) {
                 throw { status: 400, message: "A chave de destino ou de origem não foram encontradas" }
@@ -70,7 +70,7 @@ transaRoutes.post("/",
 
             await query.manager.save(transacao)
             await query.commitTransaction()
-            return resp.status(201).json(transacao)
+            return resp.status(201).json({transacao: transacao, novoSaldo:  novoSaldoOrigem})
         } catch (error: any) {
              await query.rollbackTransaction()
              return resp.status(error.status || 500).json({ message: error.message })
@@ -81,6 +81,7 @@ transaRoutes.post("/",
 
     }
 )
+
 transaRoutes.get("/:id",
     async (req: Request, resp: Response) => {
         const authHeader = req.headers.authorization

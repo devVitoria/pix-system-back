@@ -14,6 +14,7 @@ const contaRepo = pixDs.getRepository(Conta);
 
 autenticacaoRoutes.post("/login", async (req: Request, resp: Response) => {
   const escope = req.body;
+  console.log("Ta vindoooo aquiii ")
   try {
     const usuario = await usuarioRepo.findOne({
       where: { email: escope.email, password: escope.password },
@@ -39,13 +40,21 @@ autenticacaoRoutes.post("/login", async (req: Request, resp: Response) => {
       if (!existsUser?.token) {
 
         const token = await JwtCreate(String(usuario?.id));
+        console.log("Criou o token", token)
+        if (!existsUser?.id) {
+          await authRepo.insert({
+            token: token,
+            usuario: usuario
+          })
+        } else {
         await authRepo.update(usuario?.id ?? 0, { ...existsUser, token });
+        }
         resp.statusCode = 201;
         resp.statusMessage = "Created";
         resp.json({
           status: "PASSANDO",
           token: token,
-          nameUser: usuario?.nome,
+          nameUser: usuario?.nome,  
           saldo: saldoUsuario?.saldo,
           userId: usuario?.id,
         });

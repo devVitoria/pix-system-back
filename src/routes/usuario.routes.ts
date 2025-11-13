@@ -98,16 +98,21 @@ usuarioRoutes.get("/", async (req: Request, resp: Response) => {
   resp.json(usuarios);
 });
 
+
+
+
 usuarioRoutes.get("/:usuarioId", async (req: Request, resp: Response) => {
   const authHeader = req.headers.authorization;
-
+console.log("Ta chegando aquiiii")
+console.log("O que caralhos vem nisso", authHeader)
   const teste = await JwtVerifyAuth(authHeader ?? "");
+  console.log("O que ta vindo pra ca t", teste)
   if (!teste) {
     resp.statusCode = 404;
     resp.statusMessage = "Acesso não permitido. Token inválido.";
     resp.send();
   }
-  const usuario = await usuarioRepo.find({
+  const usuario = await usuarioRepo.findOne({
     where: { id: parseInt(req.params.usuarioId) },
   });
 
@@ -119,7 +124,7 @@ usuarioRoutes.get("/:usuarioId", async (req: Request, resp: Response) => {
 usuarioRoutes.patch("/:usuarioId", async (req: Request, resp: Response) => {
   const authHeader = req.headers.authorization;
   const teste = await JwtVerifyAuth(authHeader ?? "");
-  if (!teste || authHeader === undefined) {
+  if (!teste) {
     resp.statusCode = 400;
     resp.statusMessage = "Acesso não permitido. Token inválido.";
     resp.send();

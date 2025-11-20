@@ -87,7 +87,7 @@ usuarioRoutes.post("/verify-data", async (req: Request, resp: Response) => {
 usuarioRoutes.get("/", async (req: Request, resp: Response) => {
   const authHeader = req.headers.authorization;
   const teste = await JwtVerifyAuth(authHeader ?? "");
-  if (!teste || authHeader === undefined) {
+  if (!teste ) {
     resp.statusCode = 404;
     resp.statusMessage = "Acesso não permitido. Token inválido.";
     resp.send();

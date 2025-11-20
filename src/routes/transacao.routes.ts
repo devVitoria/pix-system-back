@@ -86,7 +86,7 @@ transaRoutes.get("/:id",
     async (req: Request, resp: Response) => {
         const authHeader = req.headers.authorization
         const teste = JwtVerifyAuth(authHeader || "")
-        if (!teste || authHeader === undefined) {
+        if (!teste) {
             resp.statusCode = 404;
             resp.statusMessage = "Acesso não permitido. Token inválido."
             resp.send()

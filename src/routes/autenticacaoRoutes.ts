@@ -15,13 +15,20 @@ const contaRepo = pixDs.getRepository(Conta);
 autenticacaoRoutes.post("/login", async (req: Request, resp: Response) => {
   const escope = req.body;
   try {
+    const userPassCredential = await 
+      usuarioRepo.findOne({
+        where: { email: escope.email },
+      })
+     
+    const incorrectCredential = userPassCredential?.id !== null && userPassCredential?.password !== escope.password;
+    
     const usuario = await usuarioRepo.findOne({
       where: { email: escope.email, password: escope.password },
     });
 
     if (!usuario) {
-      resp.statusCode = 404;
-      resp.statusMessage = "Acesso não permitido. Usuário não encontrado.";
+      resp.statusCode = incorrectCredential ? 400 : 404;
+      resp.statusMessage = incorrectCredential ? "Credenciais inválidas." : "Acesso não permitido. Usuário não encontrado.";
       resp.send();
       return;
     }
@@ -35,54 +42,49 @@ autenticacaoRoutes.post("/login", async (req: Request, resp: Response) => {
       relations: ["usuario"],
     });
 
-
-      if (!existsUser?.token) {
-
-        const token = await JwtCreate(String(usuario?.id));
-        if (!existsUser?.id) {
-          await authRepo.insert({
-            token: token,
-            usuario: usuario
-          })
-        } else {
-        await authRepo.update(usuario?.id ?? 0, { ...existsUser, token });
-        }
-        resp.statusCode = 201;
-        resp.statusMessage = "Created";
-        resp.json({
-          status: "PASSANDO",
+    if (!existsUser?.token) {
+      const token = await JwtCreate(String(usuario?.id));
+      if (!existsUser?.id) {
+        await authRepo.insert({
           token: token,
-          nameUser: usuario?.nome,  
-          saldo: saldoUsuario?.saldo,
-          userId: usuario?.id,
+          usuario: usuario,
         });
-        return
+      } else {
+        await authRepo.update(usuario?.id ?? 0, { ...existsUser, token });
       }
+      resp.statusCode = 201;
+      resp.statusMessage = "Created";
+      resp.json({
+        status: "PASSANDO",
+        token: token,
+        nameUser: usuario?.nome,
+        saldo: saldoUsuario?.saldo,
+        userId: usuario?.id,
+      });
+      return;
+    }
 
-      try {
-        if (existsUser) {
+    try {
+      if (existsUser) {
+        const verifia = await JwtVerify(existsUser.token);
+        resp.statusCode = 200;
+        resp.statusMessage = "Correto";
+        resp.json({
+          "status:": "PASSANDO",
+          token: existsUser.token,
+          nameUser: usuario?.nome,
+          saldo: saldoUsuario?.saldo,
+          userId: existsUser.usuario.id,
+        });
 
-          const verifia = await JwtVerify(existsUser.token);
-          resp.statusCode = 200;
-          resp.statusMessage = "Correto";
-          resp.json({
-            "status:": "PASSANDO",
-            token: existsUser.token,
-            nameUser: usuario?.nome,
-            saldo: saldoUsuario?.saldo,
-            userId: existsUser.usuario.id,
-          });
-
-          return
-        }
-      } catch (e: any) {
-        if (
-          (e?.code === "ERR_JWT_EXPIRED" ||
-            e?.message?.includes("JWTExpired")) &&
-          existsUser
-        ) {
-
-          try {
+        return;
+      }
+    } catch (e: any) {
+      if (
+        (e?.code === "ERR_JWT_EXPIRED" || e?.message?.includes("JWTExpired")) &&
+        existsUser
+      ) {
+        try {
           const token = await JwtCreate(String(existsUser.usuario.id));
           await authRepo.update(existsUser.id, { token });
 
@@ -95,18 +97,15 @@ autenticacaoRoutes.post("/login", async (req: Request, resp: Response) => {
             saldo: saldoUsuario?.saldo,
             userId: existsUser.usuario.id,
           });
-          return
-        
-      } catch (e) {
-
-        resp.statusCode = 400;
-        resp.statusMessage = "erro no token";
-        resp.json({ "status:": "ERRP" });
-        return
+          return;
+        } catch (e) {
+          resp.statusCode = 400;
+          resp.statusMessage = "erro no token";
+          resp.json({ "status:": "ERRP" });
+          return;
+        }
       }
-      }
-  
-      }
+    }
   } catch (e) {
     resp.statusCode = 500;
     resp.statusMessage = "erro";
@@ -125,10 +124,14 @@ autenticacaoRoutes.patch(
       });
 
       await authRepo.delete(existsUser?.id ?? 0);
-      await authblackListRepo.insert({ token: existsUser?.token ?? "" });
+      await authblackListRepo.insert({
+        token: existsUser?.token ?? "",
+        systemDate: new Date(),
+      });
       resp.statusCode = 200;
       resp.statusMessage = "Logout";
       resp.json({ "status:": "Deslogado com sucesso" });
+      return;
     }
     await authRepo.update(req.params.id, { ...escope });
 

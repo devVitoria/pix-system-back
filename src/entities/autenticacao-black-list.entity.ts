@@ -11,4 +11,7 @@ export class AutenticacaoBlackList {
     @Column()
     token!: string
 
+    @Column()
+    systemDate!: Date
+
 }

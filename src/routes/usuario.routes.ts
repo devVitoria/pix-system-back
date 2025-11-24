@@ -4,9 +4,11 @@ import { JwtVerifyAuth } from "../functions/jwt";
 import { Usuario } from "../entities/usuario.entity";
 import { Conta } from "../entities/conta.entity";
 import { Chave } from "../entities/chave.entity";
+import { Transacao } from "../entities/transacao.entity";
 
 const usuarioRoutes = Router();
 const usuarioRepo = pixDs.getRepository(Usuario);
+const transacaoRepo = pixDs.getRepository(Transacao);
 const chaveRepo = pixDs.getRepository(Chave)
 usuarioRoutes.post("/", async (req: Request, resp: Response) => {
   const userData = req.body;
@@ -84,19 +86,40 @@ usuarioRoutes.post("/verify-data", async (req: Request, resp: Response) => {
   return resp.status(200).json({ exists: true, message: itemsFound });
 });
 
-usuarioRoutes.get("/", async (req: Request, resp: Response) => {
+usuarioRoutes.get("/pagination/:page", async (req: Request, resp: Response) => {
   const authHeader = req.headers.authorization;
   const teste = await JwtVerifyAuth(authHeader ?? "");
+
+  const page = parseInt(req.params.page as string) || 1;
+  const skip = (page - 1) * 10;
+
   if (!teste ) {
     resp.statusCode = 404;
     resp.statusMessage = "Acesso não permitido. Token inválido.";
     resp.send();
+    return;
   }
 
-  const usuarios = await usuarioRepo.find();
+
+      const [usuarios, total] = await Promise.all([
+       usuarioRepo.query(
+        `SELECT * FROM USUARIO OFFSET $1
+    FETCH NEXT 10 ROWS ONLY;
+    `,
+        [skip]
+        ),
+
+        usuarioRepo.query(
+        `SELECT COUNT(*) as total FROM USUARIO
+    `
+        ),
+    ]);
+
+    const totalPages = Math.ceil(Number(total[0].total) / 10);
+
   resp.statusCode = 200;
   resp.statusMessage = "Request sucessfull";
-  resp.json(usuarios);
+  resp.json({usuarios: usuarios, total: Number(total[0].total), totalPages, token: authHeader?.split(" ")[1]});
 });
 
 
@@ -109,6 +132,7 @@ usuarioRoutes.get("/:usuarioId", async (req: Request, resp: Response) => {
     resp.statusCode = 404;
     resp.statusMessage = "Acesso não permitido. Token inválido.";
     resp.send();
+    return;
   }
   const usuario = await usuarioRepo.findOne({
     where: { id: parseInt(req.params.usuarioId) },
@@ -116,7 +140,7 @@ usuarioRoutes.get("/:usuarioId", async (req: Request, resp: Response) => {
 
   resp.statusCode = 200;
   resp.statusMessage = "Request sucessfull";
-  resp.json(usuario);
+  resp.json({usuario: usuario, token: authHeader?.split(" ")[1]});
 });
 
 usuarioRoutes.patch("/:usuarioId", async (req: Request, resp: Response) => {
@@ -126,6 +150,7 @@ usuarioRoutes.patch("/:usuarioId", async (req: Request, resp: Response) => {
     resp.statusCode = 400;
     resp.statusMessage = "Acesso não permitido. Token inválido.";
     resp.send();
+    return;
   }
   const dataUser = req.body;
 
@@ -136,7 +161,8 @@ usuarioRoutes.patch("/:usuarioId", async (req: Request, resp: Response) => {
   if ((userUpdate?.affected ?? 0) > 0) {
     resp.statusCode = 200;
     resp.statusMessage = "Atualizado";
-    resp.json({ status: "OK" });
+    resp.json({ status: "OK", token: authHeader?.split(" ")[1] });
+    return
   } else {
     resp.statusCode = 404;
     resp.statusMessage = "Usuário não encontrado";
@@ -152,6 +178,7 @@ usuarioRoutes.delete("/:usuarioId", async (req: Request, resp: Response) => {
     resp.statusCode = 404;
     resp.statusMessage = "Acesso não permitido. Token inválido.";
     resp.send();
+    return
   }
 
   const result = await usuarioRepo.delete({
@@ -161,6 +188,7 @@ usuarioRoutes.delete("/:usuarioId", async (req: Request, resp: Response) => {
     resp.statusCode = 204;
     resp.statusMessage = "Usuário removido";
     resp.send();
+    return
   } else {
     resp.statusCode = 404;
     resp.statusMessage = "Usuário não encontrado";
@@ -181,6 +209,7 @@ usuarioRoutes.get(
       resp.statusCode = 404;
       resp.statusMessage = "Acesso não permitido. Token inválido.";
       resp.send();
+      return
     }
 
     const chaves = await usuarioRepo.findOne({
@@ -190,12 +219,12 @@ usuarioRoutes.get(
 
     resp.statusCode = 200;
     resp.statusMessage = "Request sucessfull";
-    resp.json(chaves?.chaves);
+    resp.json({chaves: chaves?.chaves, token: authHeader?.split(" ")[1]});
   }
 );
 
 usuarioRoutes.get(
-  "/:usuarioId/transacoes",
+  "/:usuarioId/transacoes/:page",
   async (req: Request, resp: Response) => {
     const authHeader = req.headers.authorization;
     const teste = JwtVerifyAuth(authHeader ?? "");
@@ -203,8 +232,10 @@ usuarioRoutes.get(
       resp.statusCode = 404;
       resp.statusMessage = "Acesso não permitido. Token inválido.";
       resp.send();
+      return
     }
 
+    
     const transacoes = await usuarioRepo.findOne({
       where: { id: parseInt(req.params.usuarioId) },
       relations: [
@@ -215,6 +246,7 @@ usuarioRoutes.get(
     });
 
     const transacoesEstrita = await transacoes?.chaves.flatMap((chave) =>
+
       chave.transacaoOrigem.map((trans) => ({
         ...trans,
         chaveEnvio: chave.chave,
@@ -222,18 +254,31 @@ usuarioRoutes.get(
     );
     let transacoesEChaveRelacionada: any[] = await Promise.all(
       (transacoesEstrita ?? []).map(async (vlr) => {
-        const chaveEnviada = await usuarioRepo.find({
-          where: { id: parseInt(req.params.usuarioId) },
-          relations: ["chaves"],
-        });
+        const transacao = await transacaoRepo.findOne({where: {id: vlr.id  }, relations: ["chave_origem", "chave_destino"]})
+        const userDestiny = await usuarioRepo.query(`select u.nome from usuario u inner join chaves c on u.id = c."usuarioId"  where c.chave = $1`, [transacao?.chave_destino.chave])
         return {
           ...vlr,
+          chaveDestino: transacao?.chave_destino.chave,
+          nomeDestinatario: userDestiny[0]?.nome
+
         };
       })
     );
+
+    const page = parseInt(req.params.page as string) || 1;
+    const take = 3;
+    const skip = (page - 1) * take;
+
+    const paginada = transacoesEChaveRelacionada.slice(skip, skip + take);
+
+    const totalPages = Math.ceil(transacoesEChaveRelacionada.length / take);
+
+
+
+
     resp.statusCode = 200;
     resp.statusMessage = "Request sucessfull";
-    resp.json(transacoesEChaveRelacionada);
+    resp.json({transacoesEChaveRelacionada: paginada, totalPages, token: authHeader?.split(" ")[1]});
   }
 );
 

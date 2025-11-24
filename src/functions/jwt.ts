@@ -9,7 +9,7 @@ export async function JwtCreate(id: string) {
     try {
     const a = await new SignJWT({ id }).setProtectedHeader({ alg: "HS256" })
         .setIssuedAt()
-        .setExpirationTime("20m")
+        .setExpirationTime("5m")
         .sign(secret);
 
     return a
@@ -24,30 +24,36 @@ export async function JwtVerify(token: string) {
 
 export async function JwtVerifyAuth(tk: string) {
     if (!tk) return false;
+
     const tokenSplit = tk.includes("Bearer") ?  tk.split(" ")[1] : tk
-    const existsUser = await authRepo.findOne({
-        where: { token: tokenSplit },
-        relations: ["usuario"],
+
+    const [header, payload, signature] = tokenSplit.split(".");
+
+    const payloadDecoded = JSON.parse(Buffer.from(payload, "base64").toString("utf8"))
+
+
+    const existisInAuth = await authRepo.findOne({
+    where: { usuario: { id: payloadDecoded.id } },
+    relations: ["usuario"],
     });
+
+
     const findBlackList = await pixDs.query("SELECT token FROM AUTENTICACAO_BLACK_LIST WHERE token = $1",[tokenSplit])
-    if (!existsUser || findBlackList.length > 0) {
+  
+    const useToken = existisInAuth?.token || tokenSplit
+
+    if (findBlackList.length > 0 || existisInAuth?.token === null) {
         return false
-    }
-    const useToken = existsUser?.token || tk
-    if (!useToken ||findBlackList.length > 0 ) {
-        const newToken = await JwtCreate(String(existsUser.usuario.id))
-        await authRepo.update(existsUser?.id ?? 0, { token: newToken })
-        return true
     }
 
     try {
-        const verifia = await JwtVerify(useToken)
+        await JwtVerify(useToken)
         return true
 
     } catch (e: any) {
         if (e?.code === "ERR_JWT_EXPIRED" || e?.message?.includes("JWTExpired")) {
-            const newTokenCath = await JwtCreate(String(existsUser?.usuario.id))
-            await authRepo.update(existsUser?.id ?? 0, { ...existsUser, token: newTokenCath })
+            const newTokenCath = await JwtCreate(String(existisInAuth?.usuario.id))
+            await authRepo.update(existisInAuth?.id ?? 0, { token: newTokenCath })
 
             return true
         }

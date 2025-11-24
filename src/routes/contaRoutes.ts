@@ -29,6 +29,7 @@ contaRoutes.patch("/", async (req: Request, resp: Response) => {
     resp.statusCode = 200;
     resp.statusMessage = "Saldo atualizado";
     resp.json({ "status:": "OK" });
+    return
   } catch (error) {
     console.log("Erro ao atualizar saldo", error);
   }

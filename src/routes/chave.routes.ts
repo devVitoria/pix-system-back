@@ -17,6 +17,7 @@ chavesRoutes.post("/", async (req: Request, resp: Response) => {
     resp.statusCode = 404;
     resp.statusMessage = "Acesso não permitido. Token inválido.";
     resp.send();
+    return
   }
 
   const data = req.body;
@@ -45,7 +46,8 @@ chavesRoutes.post("/", async (req: Request, resp: Response) => {
     pixDs.manager.save(chave);
     resp.statusCode = 201;
     resp.statusMessage = "Chave Criada";
-    resp.send(chave);
+    resp.send({ chave: chave, token: authHeader?.split(" ")[1] });
+    return
   } catch (e: any) {
     resp.status(404).send(e.message ?? "Erro ao criar chave     ");
   }
@@ -57,7 +59,8 @@ chavesRoutes.delete("/:chave", async (req: Request, resp: Response) => {
   if (!teste || authHeader === undefined) {
     resp.statusCode = 404;
     resp.statusMessage = "Acesso não permitido. Token inválido.";
-    resp.send();
+    resp.send();  
+    return
   }
 
   const query = await chavesRepo.delete(req.params.chave);
@@ -65,10 +68,12 @@ chavesRoutes.delete("/:chave", async (req: Request, resp: Response) => {
     resp.statusCode = 204;
     resp.statusMessage = "Chave deletada!";
     resp.send();
+    return
   } else {
     resp.statusCode = 404;
     resp.statusMessage = "Chave não encontrada!";
     resp.send();
+    return
   }
 });
 
@@ -80,6 +85,7 @@ chavesRoutes.get("/get-chave/:chave", async (req: Request, resp: Response) => {
     resp.statusCode = 404;
     resp.statusMessage = "Acesso não permitido. Token inválido.";
     resp.send();
+    return
   }
 
   const chave = await chavesRepo.findOne({
@@ -93,7 +99,7 @@ chavesRoutes.get("/get-chave/:chave", async (req: Request, resp: Response) => {
   });
   resp.statusCode = 200;
   resp.statusMessage = "Requisição recebida";
-  resp.json(chave);
+  resp.json({ chave: chave, token: authHeader?.split(" ")[1]});
 });
 
 chavesRoutes.get(
@@ -105,6 +111,7 @@ chavesRoutes.get(
       resp.statusCode = 404;
       resp.statusMessage = "Acesso não permitido. Token inválido.";
       resp.send();
+      return
     }
 
     const requestUser = await usuarioRepo.findOneBy({
@@ -133,7 +140,7 @@ chavesRoutes.get(
     }
     resp.statusCode = 200;
     resp.statusMessage = "Chave destino encontrada";
-    resp.json(chave?.usuario);
+    resp.json({user: chave?.usuario, token: authHeader?.split(" ")[1]});
   }
 );
 
@@ -178,6 +185,7 @@ chavesRoutes.get(
         resp.statusCode = 404;
         resp.statusMessage = "Acesso não permitido. Token inválido.";
         resp.send();
+        return
     }
 
     const chaves = await chavesRepo.query("SELECT * FROM chaves");

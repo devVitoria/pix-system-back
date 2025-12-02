@@ -19,12 +19,15 @@ autenticacaoRoutes.post("/login", async (req: Request, resp: Response) => {
       usuarioRepo.findOne({
         where: { email: escope.email },
       })
+
      
     const incorrectCredential = userPassCredential?.id !== null && userPassCredential?.password !== escope.password;
     
     const usuario = await usuarioRepo.findOne({
       where: { email: escope.email, password: escope.password },
+      relations: ["conta"]
     });
+
 
     if (!usuario) {
       resp.statusCode = incorrectCredential ? 400 : 404;
@@ -34,7 +37,7 @@ autenticacaoRoutes.post("/login", async (req: Request, resp: Response) => {
     }
 
     const saldoUsuario = await contaRepo.findOne({
-      where: { id: usuario?.conta?.nroConta },
+      where: { nroConta: usuario?.conta?.nroConta },
     });
 
     const existsUser = await authRepo.findOne({
@@ -55,7 +58,7 @@ autenticacaoRoutes.post("/login", async (req: Request, resp: Response) => {
       resp.statusCode = 201;
       resp.statusMessage = "Created";
       resp.json({
-        status: "PASSANDO",
+        status: "PASSANDO1",
         token: token,
         nameUser: usuario?.nome,
         saldo: saldoUsuario?.saldo,
@@ -70,7 +73,7 @@ autenticacaoRoutes.post("/login", async (req: Request, resp: Response) => {
         resp.statusCode = 200;
         resp.statusMessage = "Correto";
         resp.json({
-          "status:": "PASSANDO",
+          "status:": "PASSANDO2",
           token: existsUser.token,
           nameUser: usuario?.nome,
           saldo: saldoUsuario?.saldo,
@@ -91,7 +94,7 @@ autenticacaoRoutes.post("/login", async (req: Request, resp: Response) => {
           resp.statusCode = 201;
           resp.statusMessage = "recriou o token pq tava expirado";
           resp.json({
-            "status:": "PASSANDO",
+            "status:": "PASSANDO3",
             token: existsUser.token,
             nameUser: usuario?.nome,
             saldo: saldoUsuario?.saldo,

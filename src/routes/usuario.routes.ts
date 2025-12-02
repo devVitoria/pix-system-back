@@ -180,7 +180,7 @@ usuarioRoutes.delete("/:usuarioId", async (req: Request, resp: Response) => {
     resp.send();
     return
   }
-
+// add softdelete dps TODO
   const result = await usuarioRepo.delete({
     id: parseInt(req.params.usuarioId),
   });

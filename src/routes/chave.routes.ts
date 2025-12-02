@@ -10,15 +10,15 @@ const chavesRoutes = Router();
 const chavesRepo = pixDs.getRepository(Chave);
 const usuarioRepo = pixDs.getRepository(Usuario);
 
-chavesRoutes.post("/", async (req: Request, resp: Response) => {
-  const authHeader = req.headers.authorization;
-  const teste = JwtVerifyAuth(authHeader || "");
-  if (!teste || authHeader === undefined) {
-    resp.statusCode = 404;
-    resp.statusMessage = "Acesso não permitido. Token inválido.";
-    resp.send();
-    return
-  }
+  chavesRoutes.post("/", async (req: Request, resp: Response) => {
+    const authHeader = req.headers.authorization;
+    const teste = JwtVerifyAuth(authHeader || "");
+    if (!teste || authHeader === undefined) {
+      resp.statusCode = 404;
+      resp.statusMessage = "Acesso não permitido. Token inválido.";
+      resp.send();
+      return
+    }
 
   const data = req.body;
 

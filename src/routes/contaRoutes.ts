@@ -13,6 +13,7 @@ contaRoutes.patch("/", async (req: Request, resp: Response) => {
   const teste = JwtVerifyAuth(authHeader ?? "");
   if (!teste || authHeader === undefined)
     return new Error("Token inválido, não permitido.");
+ 
   const constID = await userRepo.findOne({ where: { id: novoSaldo.id } });
   if (!constID) {
     resp.statusCode = 404;
@@ -28,7 +29,7 @@ contaRoutes.patch("/", async (req: Request, resp: Response) => {
 
     resp.statusCode = 200;
     resp.statusMessage = "Saldo atualizado";
-    resp.json({ "status:": "OK" });
+    resp.json({ "status:": "OK", token: authHeader.split(" ")[1] });
     return
   } catch (error) {
     console.log("Erro ao atualizar saldo", error);
